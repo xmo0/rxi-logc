@@ -13,26 +13,36 @@ extern "C"
 {
 #endif
 
-#include <stdio.h>
 #include <stdarg.h>
+#include <stdio.h>
 #include <stdbool.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include <time.h>
+#include <unistd.h>
 
-#define LOG_VERSION "0.1.0"
+#define LOG_VERSION "0.2.0"
 
 typedef struct
 {
-    va_list     ap;
-    const char *fmt;
-    const char *file;
-    struct tm  *time;
-    void       *udata;
-    int         line;
-    int         level;
-} log_Event;
+    char        *file_name;
+    off_t        max_log_size;
+    unsigned int max_logs;
+} rolling_appender;
 
-typedef void (*log_LogFn)(log_Event *ev);
-typedef void (*log_LockFn)(bool lock, void *udata);
+typedef struct
+{
+    va_list          ap;
+    const char      *fmt;
+    const char      *file;
+    struct tm       *time;
+    void            *udata;
+    int              line;
+    int              level;
+    rolling_appender ra;
+} log_Event;
 
 enum
 {
@@ -43,6 +53,9 @@ enum
     LOGC_DEBUG,
     LOGC_TRACE
 };
+
+typedef void (*log_LogFn)(log_Event *ev);
+typedef void (*log_LockFn)(bool lock, void *udata);
 
 #define log_trace(...) log_log(LOGC_TRACE, __FILE__, __LINE__, __VA_ARGS__)
 #define log_debug(...) log_log(LOGC_DEBUG, __FILE__, __LINE__, __VA_ARGS__)
@@ -57,6 +70,7 @@ void        log_set_console_level(int level);
 void        log_set_file_level(int level);
 void        log_set_quiet(bool enable);
 int         log_add_callback(log_LogFn fn, void *udata, int level);
+int         log_add_rolling_appender(rolling_appender ra, int level);
 int         log_add_fp(FILE *fp, int level);
 
 void log_log(int level, const char *file, int line, const char *fmt, ...);
