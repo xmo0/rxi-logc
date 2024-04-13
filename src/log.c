@@ -20,9 +20,11 @@
  * IN THE SOFTWARE.
  */
 
+#include <unistd.h> // for usleep(), used in multi-thread test
 #include "log.h"
 
 #define MAX_CALLBACKS 32
+#define MULTI_THREAD_SAFETY
 
 typedef struct
 {
@@ -62,7 +64,13 @@ static void stdout_callback(log_Event *ev)
 #else
     fprintf(ev->udata, "%s %-5s %s:%d: ", buf, level_strings[ev->level], ev->file, ev->line);
 #endif
+#ifdef MULTI_THREAD_SAFETY
+    usleep(1);
+#endif
     vfprintf(ev->udata, ev->fmt, ev->ap);
+#ifdef MULTI_THREAD_SAFETY
+    usleep(1);
+#endif
     fprintf(ev->udata, "\n");
     fflush(ev->udata);
 }
