@@ -20,7 +20,8 @@
  * IN THE SOFTWARE.
  */
 
-#include <unistd.h> // for usleep(), used in multi-thread test
+#include <unistd.h>   // for usleep(), used in multi-thread test
+#include <sys/time.h> // struct timeval
 #include "log.h"
 
 #define MAX_CALLBACKS 32
@@ -191,4 +192,38 @@ void log_log(int level, const char *file, int line, const char *fmt, ...)
     }
 
     unlock();
+}
+
+// not used
+char time_string[25];
+/* Write time to buf in format YYYY-MM-DD HH:MM:SS.ms */
+static void time_to_str(char *buf)
+{
+    static struct timeval tv;
+    static struct tm     *tm;
+
+    static int year;
+    static int month;
+    static int day;
+    static int hour;
+    static int minutes;
+    static int seconds;
+    static int msec;
+
+    gettimeofday(&tv, NULL);
+    tm = localtime(&tv.tv_sec);
+    /* Add 1900 to get the right year value read the manual page for localtime() */
+    year = tm->tm_year + 1900;
+    /* Months are 0 indexed in struct tm */
+    month   = tm->tm_mon + 1;
+    day     = tm->tm_mday;
+    hour    = tm->tm_hour;
+    minutes = tm->tm_min;
+    seconds = tm->tm_sec;
+    msec    = (int)(tv.tv_usec / 1000);
+    // buf[strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", lt)] = '\0';
+    int len = sprintf(
+        buf, "%04d-%02d-%02d %02d:%02d:%02d.%03d ", year, month, day, hour, minutes, seconds, msec);
+    buf[len] = '\0';
+    printf("Time string length is : %d", len);
 }
