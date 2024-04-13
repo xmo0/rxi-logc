@@ -53,7 +53,7 @@ void log_lock(bool lock, void *udata)
 
 void *thread_a(void *arg)
 {
-    printf("thread_a start\n");
+    printf("thread_a start, thread id: %ld\n", pthread_self());
     // 因为上面的打印未使用mutex保护，延时以避免跟log_xxx系列的函数输出内容混在一起了
     usleep(1000 * 10);
 
@@ -66,7 +66,7 @@ void *thread_a(void *arg)
 
 void *thread_b(void *arg)
 {
-    printf("thread_b start\n");
+    printf("thread_b start, thread id: %ld\n", pthread_self());
     // 因为上面的打印未使用mutex保护，延时以避免跟log_xxx系列的函数输出内容混在一起了
     usleep(1000 * 10);
 
