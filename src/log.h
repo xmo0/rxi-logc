@@ -8,6 +8,11 @@
 #ifndef LOG_H
 #define LOG_H
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdbool.h>
@@ -15,29 +20,29 @@
 
 #define LOG_VERSION "0.1.0"
 
-typedef struct
-{
-    va_list     ap;
-    const char *fmt;
-    const char *file;
-    struct tm  *time;
-    void       *udata;
-    int         line;
-    int         level;
-} log_Event;
+    typedef struct
+    {
+        va_list     ap;
+        const char *fmt;
+        const char *file;
+        struct tm  *time;
+        void       *udata;
+        int         line;
+        int         level;
+    } log_Event;
 
-typedef void (*log_LogFn)(log_Event *ev);
-typedef void (*log_LockFn)(bool lock, void *udata);
+    typedef void (*log_LogFn)(log_Event *ev);
+    typedef void (*log_LockFn)(bool lock, void *udata);
 
-enum
-{
-    LOG_FATAL, // this log level cannot be muted by log_set_xxx_level()
-    LOG_ERROR,
-    LOG_WARN,
-    LOG_INFO,
-    LOG_DEBUG,
-    LOG_TRACE
-};
+    enum
+    {
+        LOG_FATAL, // this log level cannot be muted by log_set_xxx_level()
+        LOG_ERROR,
+        LOG_WARN,
+        LOG_INFO,
+        LOG_DEBUG,
+        LOG_TRACE
+    };
 
 #define log_trace(...) log_log(LOG_TRACE, __FILE__, __LINE__, __VA_ARGS__)
 #define log_debug(...) log_log(LOG_DEBUG, __FILE__, __LINE__, __VA_ARGS__)
@@ -46,14 +51,18 @@ enum
 #define log_error(...) log_log(LOG_ERROR, __FILE__, __LINE__, __VA_ARGS__)
 #define log_fatal(...) log_log(LOG_FATAL, __FILE__, __LINE__, __VA_ARGS__)
 
-const char *log_level_string(int level);
-void        log_set_lock(log_LockFn fn, void *udata);
-void        log_set_console_level(int level);
-void        log_set_file_level(int level);
-void        log_set_quiet(bool enable);
-int         log_add_callback(log_LogFn fn, void *udata, int level);
-int         log_add_fp(FILE *fp, int level);
+    const char *log_level_string(int level);
+    void        log_set_lock(log_LockFn fn, void *udata);
+    void        log_set_console_level(int level);
+    void        log_set_file_level(int level);
+    void        log_set_quiet(bool enable);
+    int         log_add_callback(log_LogFn fn, void *udata, int level);
+    int         log_add_fp(FILE *fp, int level);
 
-void log_log(int level, const char *file, int line, const char *fmt, ...);
+    void log_log(int level, const char *file, int line, const char *fmt, ...);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
