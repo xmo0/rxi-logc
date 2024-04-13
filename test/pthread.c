@@ -19,6 +19,7 @@ void  log_lock(bool lock, void *udata);
 int main()
 {
     pthread_mutex_init(&aMutex, NULL);
+    log_set_console_level(LOG_INFO);
     log_set_lock(log_lock, &aMutex); // comment this will cause multi-thread safety issues
 
     pthread_t tid_a, tid_b;

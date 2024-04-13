@@ -31,12 +31,12 @@ typedef void (*log_LockFn)(bool lock, void *udata);
 
 enum
 {
-    LOG_TRACE,
-    LOG_DEBUG,
-    LOG_INFO,
-    LOG_WARN,
+    LOG_FATAL, // this log level cannot be muted by log_set_xxx_level()
     LOG_ERROR,
-    LOG_FATAL
+    LOG_WARN,
+    LOG_INFO,
+    LOG_DEBUG,
+    LOG_TRACE
 };
 
 #define log_trace(...) log_log(LOG_TRACE, __FILE__, __LINE__, __VA_ARGS__)
