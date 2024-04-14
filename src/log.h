@@ -30,49 +30,49 @@ typedef struct
     char        *file_name;
     off_t        max_log_size;
     unsigned int max_logs;
-} log_rolling;
+} rxilog_rolling;
 
 typedef struct
 {
-    FILE       *filp; // in single file case, use FILE *
-    log_rolling roll; // in case of log-file exceeds the max length of file
-    struct tm  *time;
-    int         level;
-    const char *file;
-    int         line;
-    const char *fmt;
-    va_list     ap;
-} log_Event;
+    FILE          *filp; // in single file case, use FILE *
+    rxilog_rolling roll; // in case of log-file exceeds the max length of file
+    struct tm     *time;
+    int            level;
+    const char    *file;
+    int            line;
+    const char    *fmt;
+    va_list        ap;
+} rxilog_Event;
 
 enum
 {
-    LOGC_FATAL, // this log level cannot be muted by log_set_xxx_level()
-    LOGC_ERROR,
-    LOGC_WARN,
-    LOGC_INFO,
-    LOGC_DEBUG,
-    LOGC_TRACE
+    RXILOG_FATAL, // this log level cannot be muted by log_set_xxx_level()
+    RXILOG_ERROR,
+    RXILOG_WARN,
+    RXILOG_INFO,
+    RXILOG_DEBUG,
+    RXILOG_TRACE
 };
 
-typedef void (*log_LogFn)(log_Event *ev);
-typedef void (*log_LockFn)(bool lock, void *udata);
+typedef void (*rxilog_LogFn)(rxilog_Event *ev);
+typedef void (*rxilog_LockFn)(bool lock, void *udata);
 
-#define log_trace(...) log_log(LOGC_TRACE, __FILE__, __LINE__, __VA_ARGS__)
-#define log_debug(...) log_log(LOGC_DEBUG, __FILE__, __LINE__, __VA_ARGS__)
-#define log_info(...)  log_log(LOGC_INFO, __FILE__, __LINE__, __VA_ARGS__)
-#define log_warn(...)  log_log(LOGC_WARN, __FILE__, __LINE__, __VA_ARGS__)
-#define log_error(...) log_log(LOGC_ERROR, __FILE__, __LINE__, __VA_ARGS__)
-#define log_fatal(...) log_log(LOGC_FATAL, __FILE__, __LINE__, __VA_ARGS__)
+#define rxilog_trace(...) rxilog_log(RXILOG_TRACE, __FILE__, __LINE__, __VA_ARGS__)
+#define rxilog_debug(...) rxilog_log(RXILOG_DEBUG, __FILE__, __LINE__, __VA_ARGS__)
+#define rxilog_info(...)  rxilog_log(RXILOG_INFO, __FILE__, __LINE__, __VA_ARGS__)
+#define rxilog_warn(...)  rxilog_log(RXILOG_WARN, __FILE__, __LINE__, __VA_ARGS__)
+#define rxilog_error(...) rxilog_log(RXILOG_ERROR, __FILE__, __LINE__, __VA_ARGS__)
+#define rxilog_fatal(...) rxilog_log(RXILOG_FATAL, __FILE__, __LINE__, __VA_ARGS__)
 
-const char *log_level_string(int level);
-void        log_set_lock(log_LockFn lockFn, void *lockData);
-void        log_set_quiet(bool enable);
-void        log_set_console_level(int level);
-int         log_add_callback(log_LogFn fn, FILE *filp, int level);
-int         log_add_fp(FILE *fp, int level);
-int         log_add_rolling(log_rolling roll, int level);
+const char *rxilog_level_string(int level);
+void        rxilog_set_lock(rxilog_LockFn lockFn, void *lockData);
+void        rxilog_set_quiet(bool enable);
+void        rxilog_set_console_level(int level);
+int         rxilog_add_callback(rxilog_LogFn fn, FILE *filp, int level);
+int         rxilog_add_fp(FILE *fp, int level);
+int         rxilog_add_rolling(rxilog_rolling roll, int level);
 
-void log_log(int level, const char *file, int line, const char *fmt, ...);
+void rxilog_log(int level, const char *file, int line, const char *fmt, ...);
 
 #ifdef __cplusplus
 }

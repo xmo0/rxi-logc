@@ -29,19 +29,19 @@
 
 typedef struct
 {
-    log_LogFn   fn;
-    FILE       *filp;
-    int         level;
-    log_rolling roll;
+    rxilog_LogFn   fn;
+    FILE          *filp;
+    int            level;
+    rxilog_rolling roll;
 } Callback;
 
 static struct
 {
-    log_LockFn lockFn;
-    void      *lockData;
-    bool       quiet;
-    int        console_level;
-    Callback   callbacks[MAX_CALLBACKS];
+    rxilog_LockFn lockFn;
+    void         *lockData;
+    bool          quiet;
+    int           console_level;
+    Callback      callbacks[MAX_CALLBACKS];
 } L;
 
 static const char *level_strings[] = { "FATAL", "ERROR", "WARN", "INFO", "DEBUG", "TRACE" };
@@ -63,7 +63,7 @@ static int get_next_available_callback()
     return -1;
 }
 
-static void console_callback(log_Event *ev)
+static void console_callback(rxilog_Event *ev)
 {
     char buf[16];
     buf[strftime(buf, sizeof(buf), "%H:%M:%S", ev->time)] = '\0';
@@ -89,7 +89,7 @@ static void console_callback(log_Event *ev)
     fflush(ev->filp);
 }
 
-static void file_callback(log_Event *ev)
+static void file_callback(rxilog_Event *ev)
 {
     char buf[64];
     buf[strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", ev->time)] = '\0';
@@ -99,7 +99,7 @@ static void file_callback(log_Event *ev)
     fflush(ev->filp);
 }
 
-static void rolling_appender_callback(log_Event *ev)
+static void rolling_appender_callback(rxilog_Event *ev)
 {
     char *msg = (char *)calloc(strlen(ev->roll.file_name) + 1024, sizeof(char));
 
@@ -164,7 +164,7 @@ static void unlock(void)
     }
 }
 
-static void set_ev_time(log_Event *ev)
+static void set_ev_time(rxilog_Event *ev)
 {
     if (!ev->time)
     {
@@ -173,28 +173,28 @@ static void set_ev_time(log_Event *ev)
     }
 }
 
-const char *log_level_string(int level)
+const char *rxilog_level_string(int level)
 {
     return level_strings[level];
 }
 
-void log_set_lock(log_LockFn lockFn, void *lockData)
+void rxilog_set_lock(rxilog_LockFn lockFn, void *lockData)
 {
     L.lockFn   = lockFn;
     L.lockData = lockData;
 }
 
-void log_set_console_level(int level)
+void rxilog_set_console_level(int level)
 {
     L.console_level = level;
 }
 
-void log_set_quiet(bool enable)
+void rxilog_set_quiet(bool enable)
 {
     L.quiet = enable;
 }
 
-int log_add_callback(log_LogFn fn, FILE *filp, int level)
+int rxilog_add_callback(rxilog_LogFn fn, FILE *filp, int level)
 {
     int nac = get_next_available_callback();
     if (nac < 0)
@@ -206,12 +206,12 @@ int log_add_callback(log_LogFn fn, FILE *filp, int level)
     return 0;
 }
 
-int log_add_fp(FILE *filp, int level)
+int rxilog_add_fp(FILE *filp, int level)
 {
-    return log_add_callback(file_callback, filp, level);
+    return rxilog_add_callback(file_callback, filp, level);
 }
 
-int log_add_rolling(log_rolling roll, int level)
+int rxilog_add_rolling(rxilog_rolling roll, int level)
 {
     int nac = get_next_available_callback();
     if (nac < 0)
@@ -223,14 +223,14 @@ int log_add_rolling(log_rolling roll, int level)
     return 0;
 }
 
-void log_log(int level, const char *file, int line, const char *fmt, ...)
+void rxilog_log(int level, const char *file, int line, const char *fmt, ...)
 {
     if (L.quiet)
     {
         return;
     }
 
-    log_Event ev = {
+    rxilog_Event ev = {
         .level = level,
         .file  = file,
         .line  = line,

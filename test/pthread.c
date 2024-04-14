@@ -19,8 +19,8 @@ void  log_lock(bool lock, void *udata);
 int main()
 {
     pthread_mutex_init(&aMutex, NULL);
-    log_set_console_level(LOGC_INFO);
-    log_set_lock(log_lock, &aMutex); // comment this will cause multi-thread safety issues
+    rxilog_set_console_level(RXILOG_INFO);
+    rxilog_set_lock(log_lock, &aMutex); // comment this will cause multi-thread safety issues
 
     pthread_t tid_a, tid_b;
     if (pthread_create(&tid_a, NULL, thread_a, NULL))
@@ -60,7 +60,7 @@ void *thread_a(void *arg)
 
     for (int i = 0; i < 20; i++)
     {
-        log_info("aaaaaaaaaa %d", i);
+        rxilog_info("aaaaaaaaaa %d", i);
         usleep(1);
     }
 }
@@ -73,7 +73,7 @@ void *thread_b(void *arg)
 
     for (int i = 0; i < 20; i++)
     {
-        log_fatal("bbbbbbbbbb %d", i);
+        rxilog_fatal("bbbbbbbbbb %d", i);
         usleep(1);
     }
 }
