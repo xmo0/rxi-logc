@@ -34,13 +34,13 @@ typedef struct
 
 typedef struct
 {
-    va_list          ap;
-    const char      *fmt;
-    const char      *file;
+    FILE            *filp; // the original repo use type (void *) here, why?
     struct tm       *time;
-    void            *udata;
-    int              line;
     int              level;
+    const char      *file;
+    int              line;
+    const char      *fmt;
+    va_list          ap;
     rolling_appender ra;
 } log_Event;
 
@@ -69,7 +69,7 @@ void        log_set_lock(log_LockFn fn, void *udata);
 void        log_set_console_level(int level);
 void        log_set_file_level(int level);
 void        log_set_quiet(bool enable);
-int         log_add_callback(log_LogFn fn, void *udata, int level);
+int         log_add_callback(log_LogFn fn, FILE *filp, int level);
 int         log_add_rolling_appender(rolling_appender ra, int level);
 int         log_add_fp(FILE *fp, int level);
 

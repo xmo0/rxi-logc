@@ -25,12 +25,12 @@
 #include "log.h"
 
 #define MAX_CALLBACKS 32
-#define MULTI_THREAD_SAFETY
+#define MULTI_THREAD_SAFETY_TEST
 
 typedef struct
 {
     log_LogFn        fn;
-    void            *udata;
+    FILE            *filp;
     int              level;
     rolling_appender ra;
 } Callback;
@@ -52,7 +52,7 @@ static const char *level_colors[]
     = { "\x1b[35m", "\x1b[31m", "\x1b[33m", "\x1b[32m", "\x1b[36m", "\x1b[94m" };
 #endif
 
-int get_next_available_callback()
+static int get_next_available_callback()
 {
     for (int i = 0; i < MAX_CALLBACKS; i++)
     {
@@ -63,12 +63,13 @@ int get_next_available_callback()
     }
     return -1;
 }
+
 static void stdout_callback(log_Event *ev)
 {
     char buf[16];
     buf[strftime(buf, sizeof(buf), "%H:%M:%S", ev->time)] = '\0';
 #ifdef LOG_USE_COLOR
-    fprintf(ev->udata,
+    fprintf(ev->filp,
             "%s %s%-5s\x1b[0m \x1b[90m%s:%d:\x1b[0m ",
             buf,
             level_colors[ev->level],
@@ -76,38 +77,38 @@ static void stdout_callback(log_Event *ev)
             ev->file,
             ev->line);
 #else
-    fprintf(ev->udata, "%s %-5s %s:%d: ", buf, level_strings[ev->level], ev->file, ev->line);
+    fprintf(ev->filp, "%s %-5s %s:%d: ", buf, level_strings[ev->level], ev->file, ev->line);
 #endif
-#ifdef MULTI_THREAD_SAFETY
+#ifdef MULTI_THREAD_SAFETY_TEST
     usleep(1);
 #endif
-    vfprintf(ev->udata, ev->fmt, ev->ap);
-#ifdef MULTI_THREAD_SAFETY
+    vfprintf(ev->filp, ev->fmt, ev->ap);
+#ifdef MULTI_THREAD_SAFETY_TEST
     usleep(1);
 #endif
-    fprintf(ev->udata, "\n");
-    fflush(ev->udata);
+    fprintf(ev->filp, "\n");
+    fflush(ev->filp);
 }
 
 static void file_callback(log_Event *ev)
 {
     char buf[64];
     buf[strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", ev->time)] = '\0';
-    fprintf(ev->udata, "%s %-5s %s:%d: ", buf, level_strings[ev->level], ev->file, ev->line);
-    vfprintf(ev->udata, ev->fmt, ev->ap);
-    fprintf(ev->udata, "\n");
-    fflush(ev->udata);
+    fprintf(ev->filp, "%s %-5s %s:%d: ", buf, level_strings[ev->level], ev->file, ev->line);
+    vfprintf(ev->filp, ev->fmt, ev->ap);
+    fprintf(ev->filp, "\n");
+    fflush(ev->filp);
 }
 
 static void rolling_appender_callback(log_Event *ev)
 {
     char *msg = (char *)calloc(strlen(ev->ra.file_name) + 1024, sizeof(char));
 
-    if (ev->udata == NULL)
+    if (ev->filp == NULL)
     {
-        ev->udata = fopen(ev->ra.file_name, "a");
+        ev->filp = fopen(ev->ra.file_name, "a");
     }
-    if (ev->udata == NULL)
+    if (ev->filp == NULL)
     {
         sprintf(msg, "Unable to open log file: %s", ev->ra.file_name);
         perror(msg);
@@ -132,8 +133,8 @@ static void rolling_appender_callback(log_Event *ev)
     {
         char *old = (char *)calloc(strlen(ev->ra.file_name) + 10, sizeof(char));
         char *new = (char *)calloc(strlen(ev->ra.file_name) + 10, sizeof(char));
-        fclose(ev->udata);
-        ev->udata = NULL;
+        fclose(ev->filp);
+        ev->filp = NULL;
         for (unsigned int i = ev->ra.max_logs - 1; i >= 1; i--)
         {
             sprintf(old, "%s.%u", ev->ra.file_name, i);
@@ -164,6 +165,16 @@ static void unlock(void)
     }
 }
 
+static void init_event(log_Event *ev, FILE *fp)
+{
+    if (!ev->time)
+    {
+        time_t t = time(NULL);
+        ev->time = localtime(&t);
+    }
+    ev->filp = fp;
+}
+
 const char *log_level_string(int level)
 {
     return level_strings[level];
@@ -190,7 +201,7 @@ void log_set_quiet(bool enable)
     L.quiet = enable;
 }
 
-int log_add_callback(log_LogFn fn, void *udata, int level)
+int log_add_callback(log_LogFn fn, FILE *filp, int level)
 {
     int nac = get_next_available_callback();
     if (nac < 0)
@@ -198,7 +209,7 @@ int log_add_callback(log_LogFn fn, void *udata, int level)
         return nac;
     }
 
-    L.callbacks[nac] = (Callback) { fn, udata, level, { 0 } };
+    L.callbacks[nac] = (Callback) { fn, filp, level, { 0 } };
     return 0;
 }
 
@@ -219,28 +230,23 @@ int log_add_fp(FILE *fp, int level)
     return log_add_callback(file_callback, fp, level);
 }
 
-static void init_event(log_Event *ev, void *udata)
-{
-    if (!ev->time)
-    {
-        time_t t = time(NULL);
-        ev->time = localtime(&t);
-    }
-    ev->udata = udata;
-}
-
 void log_log(int level, const char *file, int line, const char *fmt, ...)
 {
+    if (L.quiet)
+    {
+        return;
+    }
+
     log_Event ev = {
-        .fmt   = fmt,
+        .level = level,
         .file  = file,
         .line  = line,
-        .level = level,
+        .fmt   = fmt,
     };
 
     lock();
 
-    if (!L.quiet && level <= L.console_level)
+    if (level <= L.console_level)
     {
         init_event(&ev, stderr);
         va_start(ev.ap, fmt);
@@ -248,27 +254,24 @@ void log_log(int level, const char *file, int line, const char *fmt, ...)
         va_end(ev.ap);
     }
 
-    if (!L.quiet && level <= L.file_level)
+    for (int i = 0; i < MAX_CALLBACKS && L.callbacks[i].fn; i++)
     {
-        for (int i = 0; i < MAX_CALLBACKS && L.callbacks[i].fn; i++)
+        Callback *cb = &L.callbacks[i];
+        if (level <= cb->level)
         {
-            Callback *cb = &L.callbacks[i];
-            if (level >= cb->level)
-            {
-                init_event(&ev, cb->udata);
-                va_start(ev.ap, fmt);
-                ev.ra = cb->ra;
-                cb->fn(&ev);
-                cb->udata = ev.udata;
-                va_end(ev.ap);
-            }
+            init_event(&ev, cb->filp);
+            va_start(ev.ap, fmt);
+            // ev.ra = cb->ra;
+            cb->fn(&ev);
+            // cb->filp = ev.filp;
+            va_end(ev.ap);
         }
     }
 
     unlock();
 }
 
-// not used
+// currently not used
 char time_string[25];
 /* Write time to buf in format YYYY-MM-DD HH:MM:SS.ms */
 static void time_to_str(char *buf)
