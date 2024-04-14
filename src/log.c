@@ -40,7 +40,6 @@ static struct
     void      *udata;
     log_LockFn lock;
     int        console_level;
-    int        file_level;
     bool       quiet;
     Callback   callbacks[MAX_CALLBACKS];
 } L;
@@ -189,11 +188,6 @@ void log_set_lock(log_LockFn fn, void *udata)
 void log_set_console_level(int level)
 {
     L.console_level = level;
-}
-
-void log_set_file_level(int level)
-{
-    L.file_level = level;
 }
 
 void log_set_quiet(bool enable)

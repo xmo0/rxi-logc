@@ -67,7 +67,6 @@ typedef void (*log_LockFn)(bool lock, void *udata);
 const char *log_level_string(int level);
 void        log_set_lock(log_LockFn fn, void *udata);
 void        log_set_console_level(int level);
-void        log_set_file_level(int level);
 void        log_set_quiet(bool enable);
 int         log_add_callback(log_LogFn fn, FILE *filp, int level);
 int         log_add_rolling_appender(rolling_appender ra, int level);
