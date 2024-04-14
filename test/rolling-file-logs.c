@@ -14,8 +14,8 @@ int main()
 {
     rxilog_set_console_level(RXILOG_FATAL);
 
-    rxilog_rolling roll = { FILE_NAME, 1500, 5 };
-    rxilog_add_rolling(roll, RXILOG_DEBUG);
+    rxilog_file_t roll = { FILE_NAME, true, 1500, 5 };
+    rxilog_add_file(&roll, RXILOG_DEBUG);
 
     while (1)
     {

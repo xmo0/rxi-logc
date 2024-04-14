@@ -25,21 +25,28 @@ extern "C"
 
 #define LOG_VERSION "0.2.0"
 
+/*
+    不同场景下，下面这个数据结构的用法存在差别
+    1、console场景下，直接配置的是filp（stdout或者stderr），并且永久有效
+    2、文件场景下（不开启rolling），用户设置的是file_name，首次使用时转换成filp并持续使用
+    2、文件场景下（开启rolling），用户设置的是file_name，使用中会反复生成/销毁filp
+*/
 typedef struct
 {
     char        *file_name;
-    off_t        max_log_size;
-    unsigned int max_logs;
-} rxilog_rolling;
+    bool         rolling;
+    off_t        max_log_size; // be valid when .rolling = true
+    unsigned int max_logs;     // be valid when .rolling = true
+} rxilog_file_t;
 
 typedef struct
 {
-    FILE          *filp; // in single file case, use FILE *
-    rxilog_rolling roll; // in case of log-file exceeds the max length of file
+    FILE          *filp; // use with console logs
+    rxilog_file_t *fp;   // use with file logs
     struct tm     *time;
     int            level;
-    const char    *file;
-    int            line;
+    const char    *src_file;
+    int            src_line;
     const char    *fmt;
     va_list        ap;
 } rxilog_Event;
@@ -69,8 +76,8 @@ void        rxilog_set_lock(rxilog_LockFn lockFn, void *lockData);
 void        rxilog_set_quiet(bool enable);
 void        rxilog_set_console_level(int level);
 int         rxilog_add_callback(rxilog_LogFn fn, FILE *filp, int level);
-int         rxilog_add_fp(FILE *fp, int level);
-int         rxilog_add_rolling(rxilog_rolling roll, int level);
+int         rxilog_add_filp(FILE *filp, int level);
+int         rxilog_add_file(rxilog_file_t *fp, int level);
 
 void rxilog_log(int level, const char *file, int line, const char *fmt, ...);
 

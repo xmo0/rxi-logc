@@ -32,7 +32,7 @@ typedef struct
     rxilog_LogFn   fn;
     FILE          *filp;
     int            level;
-    rxilog_rolling roll;
+    rxilog_file_t *fp;
 } Callback;
 
 static struct
@@ -73,10 +73,10 @@ static void console_callback(rxilog_Event *ev)
             buf,
             level_colors[ev->level],
             level_strings[ev->level],
-            ev->file,
-            ev->line);
+            ev->src_file,
+            ev->src_line);
 #else
-    fprintf(ev->filp, "%s %-5s %s:%d: ", buf, level_strings[ev->level], ev->file, ev->line);
+    fprintf(ev->filp, "%s %-5s %s:%d: ", buf, level_strings[ev->level], ev->src_file, ev->src_line);
 #endif
 #ifdef MULTI_THREAD_SAFETY_TEST
     usleep(1);
@@ -93,7 +93,7 @@ static void file_callback(rxilog_Event *ev)
 {
     char buf[64];
     buf[strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", ev->time)] = '\0';
-    fprintf(ev->filp, "%s %-5s %s:%d: ", buf, level_strings[ev->level], ev->file, ev->line);
+    fprintf(ev->filp, "%s %-5s %s:%d: ", buf, level_strings[ev->level], ev->src_file, ev->src_line);
     vfprintf(ev->filp, ev->fmt, ev->ap);
     fprintf(ev->filp, "\n");
     fflush(ev->filp);
@@ -101,26 +101,36 @@ static void file_callback(rxilog_Event *ev)
 
 static void rolling_appender_callback(rxilog_Event *ev)
 {
-    char *msg = (char *)calloc(strlen(ev->roll.file_name) + 1024, sizeof(char));
+    const char *fname = ev->fp->file_name;
+    char       *msg   = (char *)calloc(strlen(fname) + 1024, sizeof(char));
 
     if (ev->filp == NULL)
     {
-        ev->filp = fopen(ev->roll.file_name, "a");
+        ev->filp = fopen(fname, "a");
+        if (ev->filp == NULL)
+        {
+            sprintf(msg, "Unable to open log file: %s", fname);
+            perror(msg);
+            free(msg);
+            return;
+        }
+        else
+        {
+            fprintf(ev->filp, "--- Log file opened ---\n");
+        }
     }
-    if (ev->filp == NULL)
+    file_callback(ev);
+
+    if (!ev->fp->rolling)
     {
-        sprintf(msg, "Unable to open log file: %s", ev->roll.file_name);
-        perror(msg);
         free(msg);
         return;
     }
 
-    file_callback(ev);
-
     struct stat buf;
-    if (stat(ev->roll.file_name, &buf) < 0)
+    if (stat(fname, &buf) < 0)
     {
-        sprintf(msg, "Unable to stat log file: %s", ev->roll.file_name);
+        sprintf(msg, "Unable to stat log file: %s", fname);
         perror(msg);
         free(msg);
         return;
@@ -128,20 +138,20 @@ static void rolling_appender_callback(rxilog_Event *ev)
 
     free(msg);
 
-    if (buf.st_size >= ev->roll.max_log_size)
+    if (buf.st_size >= ev->fp->max_log_size)
     {
-        char *old = (char *)calloc(strlen(ev->roll.file_name) + 10, sizeof(char));
-        char *new = (char *)calloc(strlen(ev->roll.file_name) + 10, sizeof(char));
+        char *old = (char *)calloc(strlen(fname) + 10, sizeof(char));
+        char *new = (char *)calloc(strlen(fname) + 10, sizeof(char));
         fclose(ev->filp);
         ev->filp = NULL;
-        for (unsigned int i = ev->roll.max_logs - 1; i >= 1; i--)
+        for (unsigned int i = ev->fp->max_logs - 1; i >= 1; i--)
         {
-            sprintf(old, "%s.%u", ev->roll.file_name, i);
-            sprintf(new, "%s.%u", ev->roll.file_name, i + 1);
+            sprintf(old, "%s.%u", fname, i);
+            sprintf(new, "%s.%u", fname, i + 1);
             rename(old, new);
         }
-        sprintf(new, "%s.1", ev->roll.file_name);
-        rename(ev->roll.file_name, new);
+        sprintf(new, "%s.1", fname);
+        rename(fname, new);
 
         free(old);
         free(new);
@@ -194,7 +204,7 @@ void rxilog_set_quiet(bool enable)
     L.quiet = enable;
 }
 
-int rxilog_add_callback(rxilog_LogFn fn, FILE *filp, int level)
+int rxilog_add_filp(FILE *filp, int level)
 {
     int nac = get_next_available_callback();
     if (nac < 0)
@@ -202,16 +212,11 @@ int rxilog_add_callback(rxilog_LogFn fn, FILE *filp, int level)
         return nac;
     }
 
-    L.callbacks[nac] = (Callback) { fn, filp, level, { 0 } };
+    L.callbacks[nac] = (Callback) { file_callback, filp, level, NULL };
     return 0;
 }
 
-int rxilog_add_fp(FILE *filp, int level)
-{
-    return rxilog_add_callback(file_callback, filp, level);
-}
-
-int rxilog_add_rolling(rxilog_rolling roll, int level)
+int rxilog_add_file(rxilog_file_t *fp, int level)
 {
     int nac = get_next_available_callback();
     if (nac < 0)
@@ -219,7 +224,7 @@ int rxilog_add_rolling(rxilog_rolling roll, int level)
         return nac;
     }
 
-    L.callbacks[nac] = (Callback) { rolling_appender_callback, NULL, level, roll };
+    L.callbacks[nac] = (Callback) { rolling_appender_callback, NULL, level, fp };
     return 0;
 }
 
@@ -231,10 +236,10 @@ void rxilog_log(int level, const char *file, int line, const char *fmt, ...)
     }
 
     rxilog_Event ev = {
-        .level = level,
-        .file  = file,
-        .line  = line,
-        .fmt   = fmt,
+        .level    = level,
+        .src_file = file,
+        .src_line = line,
+        .fmt      = fmt,
     };
 
     lock();
@@ -242,6 +247,7 @@ void rxilog_log(int level, const char *file, int line, const char *fmt, ...)
     if (level <= L.console_level)
     {
         ev.filp = stderr;
+
         set_ev_time(&ev);
         va_start(ev.ap, fmt);
         console_callback(&ev);
@@ -254,12 +260,13 @@ void rxilog_log(int level, const char *file, int line, const char *fmt, ...)
         if (level <= cb->level)
         {
             ev.filp = cb->filp;
+            ev.fp   = cb->fp;
+
             set_ev_time(&ev);
             va_start(ev.ap, fmt);
-            ev.roll = cb->roll;
             cb->fn(&ev);
-            cb->filp = ev.filp;
             va_end(ev.ap);
+            cb->filp = ev.filp;
         }
     }
 
