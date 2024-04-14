@@ -25,22 +25,22 @@
 #include "log.h"
 
 #define MAX_CALLBACKS 32
-#define MULTI_THREAD_SAFETY_TEST
+// #define MULTI_THREAD_SAFETY_TEST
 
 typedef struct
 {
-    log_LogFn        fn;
-    FILE            *filp;
-    int              level;
-    rolling_appender ra;
+    log_LogFn   fn;
+    FILE       *filp;
+    int         level;
+    log_rolling roll;
 } Callback;
 
 static struct
 {
-    void      *udata;
-    log_LockFn lock;
-    int        console_level;
+    log_LockFn lockFn;
+    void      *lockData;
     bool       quiet;
+    int        console_level;
     Callback   callbacks[MAX_CALLBACKS];
 } L;
 
@@ -63,7 +63,7 @@ static int get_next_available_callback()
     return -1;
 }
 
-static void stdout_callback(log_Event *ev)
+static void console_callback(log_Event *ev)
 {
     char buf[16];
     buf[strftime(buf, sizeof(buf), "%H:%M:%S", ev->time)] = '\0';
@@ -101,15 +101,15 @@ static void file_callback(log_Event *ev)
 
 static void rolling_appender_callback(log_Event *ev)
 {
-    char *msg = (char *)calloc(strlen(ev->ra.file_name) + 1024, sizeof(char));
+    char *msg = (char *)calloc(strlen(ev->roll.file_name) + 1024, sizeof(char));
 
     if (ev->filp == NULL)
     {
-        ev->filp = fopen(ev->ra.file_name, "a");
+        ev->filp = fopen(ev->roll.file_name, "a");
     }
     if (ev->filp == NULL)
     {
-        sprintf(msg, "Unable to open log file: %s", ev->ra.file_name);
+        sprintf(msg, "Unable to open log file: %s", ev->roll.file_name);
         perror(msg);
         free(msg);
         return;
@@ -118,9 +118,9 @@ static void rolling_appender_callback(log_Event *ev)
     file_callback(ev);
 
     struct stat buf;
-    if (stat(ev->ra.file_name, &buf) < 0)
+    if (stat(ev->roll.file_name, &buf) < 0)
     {
-        sprintf(msg, "Unable to stat log file: %s", ev->ra.file_name);
+        sprintf(msg, "Unable to stat log file: %s", ev->roll.file_name);
         perror(msg);
         free(msg);
         return;
@@ -128,20 +128,20 @@ static void rolling_appender_callback(log_Event *ev)
 
     free(msg);
 
-    if (buf.st_size >= ev->ra.max_log_size)
+    if (buf.st_size >= ev->roll.max_log_size)
     {
-        char *old = (char *)calloc(strlen(ev->ra.file_name) + 10, sizeof(char));
-        char *new = (char *)calloc(strlen(ev->ra.file_name) + 10, sizeof(char));
+        char *old = (char *)calloc(strlen(ev->roll.file_name) + 10, sizeof(char));
+        char *new = (char *)calloc(strlen(ev->roll.file_name) + 10, sizeof(char));
         fclose(ev->filp);
         ev->filp = NULL;
-        for (unsigned int i = ev->ra.max_logs - 1; i >= 1; i--)
+        for (unsigned int i = ev->roll.max_logs - 1; i >= 1; i--)
         {
-            sprintf(old, "%s.%u", ev->ra.file_name, i);
-            sprintf(new, "%s.%u", ev->ra.file_name, i + 1);
+            sprintf(old, "%s.%u", ev->roll.file_name, i);
+            sprintf(new, "%s.%u", ev->roll.file_name, i + 1);
             rename(old, new);
         }
-        sprintf(new, "%s.1", ev->ra.file_name);
-        rename(ev->ra.file_name, new);
+        sprintf(new, "%s.1", ev->roll.file_name);
+        rename(ev->roll.file_name, new);
 
         free(old);
         free(new);
@@ -150,28 +150,27 @@ static void rolling_appender_callback(log_Event *ev)
 
 static void lock(void)
 {
-    if (L.lock)
+    if (L.lockFn)
     {
-        L.lock(true, L.udata);
+        L.lockFn(true, L.lockData);
     }
 }
 
 static void unlock(void)
 {
-    if (L.lock)
+    if (L.lockFn)
     {
-        L.lock(false, L.udata);
+        L.lockFn(false, L.lockData);
     }
 }
 
-static void init_event(log_Event *ev, FILE *fp)
+static void set_ev_time(log_Event *ev)
 {
     if (!ev->time)
     {
         time_t t = time(NULL);
         ev->time = localtime(&t);
     }
-    ev->filp = fp;
 }
 
 const char *log_level_string(int level)
@@ -179,10 +178,10 @@ const char *log_level_string(int level)
     return level_strings[level];
 }
 
-void log_set_lock(log_LockFn fn, void *udata)
+void log_set_lock(log_LockFn lockFn, void *lockData)
 {
-    L.lock  = fn;
-    L.udata = udata;
+    L.lockFn   = lockFn;
+    L.lockData = lockData;
 }
 
 void log_set_console_level(int level)
@@ -207,7 +206,12 @@ int log_add_callback(log_LogFn fn, FILE *filp, int level)
     return 0;
 }
 
-int log_add_rolling_appender(rolling_appender ra, int level)
+int log_add_fp(FILE *filp, int level)
+{
+    return log_add_callback(file_callback, filp, level);
+}
+
+int log_add_rolling(log_rolling roll, int level)
 {
     int nac = get_next_available_callback();
     if (nac < 0)
@@ -215,13 +219,8 @@ int log_add_rolling_appender(rolling_appender ra, int level)
         return nac;
     }
 
-    L.callbacks[nac] = (Callback) { rolling_appender_callback, NULL, level, ra };
+    L.callbacks[nac] = (Callback) { rolling_appender_callback, NULL, level, roll };
     return 0;
-}
-
-int log_add_fp(FILE *fp, int level)
-{
-    return log_add_callback(file_callback, fp, level);
 }
 
 void log_log(int level, const char *file, int line, const char *fmt, ...)
@@ -242,9 +241,10 @@ void log_log(int level, const char *file, int line, const char *fmt, ...)
 
     if (level <= L.console_level)
     {
-        init_event(&ev, stderr);
+        ev.filp = stderr;
+        set_ev_time(&ev);
         va_start(ev.ap, fmt);
-        stdout_callback(&ev);
+        console_callback(&ev);
         va_end(ev.ap);
     }
 
@@ -253,11 +253,12 @@ void log_log(int level, const char *file, int line, const char *fmt, ...)
         Callback *cb = &L.callbacks[i];
         if (level <= cb->level)
         {
-            init_event(&ev, cb->filp);
+            ev.filp = cb->filp;
+            set_ev_time(&ev);
             va_start(ev.ap, fmt);
-            // ev.ra = cb->ra;
+            ev.roll = cb->roll;
             cb->fn(&ev);
-            // cb->filp = ev.filp;
+            cb->filp = ev.filp;
             va_end(ev.ap);
         }
     }

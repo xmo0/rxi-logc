@@ -30,18 +30,18 @@ typedef struct
     char        *file_name;
     off_t        max_log_size;
     unsigned int max_logs;
-} rolling_appender;
+} log_rolling;
 
 typedef struct
 {
-    FILE            *filp; // the original repo use type (void *) here, why?
-    struct tm       *time;
-    int              level;
-    const char      *file;
-    int              line;
-    const char      *fmt;
-    va_list          ap;
-    rolling_appender ra;
+    FILE       *filp; // in single file case, use FILE *
+    log_rolling roll; // in case of log-file exceeds the max length of file
+    struct tm  *time;
+    int         level;
+    const char *file;
+    int         line;
+    const char *fmt;
+    va_list     ap;
 } log_Event;
 
 enum
@@ -65,12 +65,12 @@ typedef void (*log_LockFn)(bool lock, void *udata);
 #define log_fatal(...) log_log(LOGC_FATAL, __FILE__, __LINE__, __VA_ARGS__)
 
 const char *log_level_string(int level);
-void        log_set_lock(log_LockFn fn, void *udata);
-void        log_set_console_level(int level);
+void        log_set_lock(log_LockFn lockFn, void *lockData);
 void        log_set_quiet(bool enable);
+void        log_set_console_level(int level);
 int         log_add_callback(log_LogFn fn, FILE *filp, int level);
-int         log_add_rolling_appender(rolling_appender ra, int level);
 int         log_add_fp(FILE *fp, int level);
+int         log_add_rolling(log_rolling roll, int level);
 
 void log_log(int level, const char *file, int line, const char *fmt, ...);
 
