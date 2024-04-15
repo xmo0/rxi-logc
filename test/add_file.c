@@ -16,11 +16,8 @@ int main()
     const char string[] = "--- Program start ---\n";
     rxilog_set_console_level(RXILOG_TRACE);
 
-    rxilog_file_t file_debug = { FILE_NAME_DEBUG, false, 0, 0 };
-    rxilog_add_file(&file_debug, RXILOG_DEBUG);
-
-    rxilog_file_t file_warn = { FILE_NAME_WARN, false, 0, 0 };
-    rxilog_add_file(&file_warn, RXILOG_WARN);
+    rxilog_add_file(RXILOG_DEBUG, FILE_NAME_DEBUG);
+    rxilog_add_file(RXILOG_WARN, FILE_NAME_WARN);
 
     rxilog_trace("number %d", 1);
     rxilog_debug("number %d", 1);

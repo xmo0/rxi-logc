@@ -23,7 +23,7 @@ int main()
         return -1;
     }
     fwrite(string, sizeof(char), strlen(string), filp_debug);
-    rxilog_add_filp(filp_debug, RXILOG_DEBUG);
+    rxilog_add_filp(RXILOG_DEBUG, filp_debug);
 
     FILE *filp_warn = fopen(FILE_NAME_WARN, "a");
     if (!filp_warn)
@@ -32,7 +32,7 @@ int main()
         return -1;
     }
     fwrite(string, sizeof(char), strlen(string), filp_warn);
-    rxilog_add_filp(filp_warn, RXILOG_WARN);
+    rxilog_add_filp(RXILOG_WARN, filp_warn);
 
     rxilog_trace("number %d", 1);
     rxilog_debug("number %d", 1);

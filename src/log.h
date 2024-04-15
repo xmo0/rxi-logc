@@ -25,30 +25,37 @@ extern "C"
 
 #define LOG_VERSION "0.2.0"
 
-/*
-    不同场景下，下面这个数据结构的用法存在差别
-    1、console场景下，直接配置的是filp（stdout或者stderr），并且永久有效
-    2、文件场景下（不开启rolling），用户设置的是file_name，首次使用时转换成filp并持续使用
-    2、文件场景下（开启rolling），用户设置的是file_name，使用中会反复生成/销毁filp
-*/
-typedef struct
+struct Callback;
+#if 0
+typedef struct Callback
 {
-    char        *file_name;
-    bool         rolling;
-    off_t        max_log_size; // be valid when .rolling = true
-    unsigned int max_logs;     // be valid when .rolling = true
-} rxilog_file_t;
+    rxilog_LogFn fn;
+    int          level;
+    FILE        *filp;
+    char        *filename;
+    off_t        max_log_size;
+    unsigned int max_logs;
+    // rxilog_file_t *fp;
+} Callback;
+#endif
 
 typedef struct
 {
-    FILE          *filp; // use with console logs
-    rxilog_file_t *fp;   // use with file logs
-    struct tm     *time;
-    int            level;
-    const char    *src_file;
-    int            src_line;
-    const char    *fmt;
-    va_list        ap;
+    char        *filename;
+    off_t        max_log_size;
+    unsigned int max_logs;
+} rxilog_rolling_t;
+
+typedef struct
+{
+    FILE            *filp; // use with console logs
+    struct Callback *cb;   // use with file logs
+    struct tm       *time;
+    int              level;
+    const char      *src_file;
+    int              src_line;
+    const char      *fmt;
+    va_list          ap;
 } rxilog_Event;
 
 enum
@@ -75,9 +82,9 @@ const char *rxilog_level_string(int level);
 void        rxilog_set_lock(rxilog_LockFn lockFn, void *lockData);
 void        rxilog_set_quiet(bool enable);
 void        rxilog_set_console_level(int level);
-int         rxilog_add_callback(rxilog_LogFn fn, FILE *filp, int level);
-int         rxilog_add_filp(FILE *filp, int level);
-int         rxilog_add_file(rxilog_file_t *fp, int level);
+int         rxilog_add_filp(int level, FILE *filp);
+int         rxilog_add_file(int level, char *filename);
+int         rxilog_add_rolling(int level, rxilog_rolling_t *roll);
 
 void rxilog_log(int level, const char *file, int line, const char *fmt, ...);
 
