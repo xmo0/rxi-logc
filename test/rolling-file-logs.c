@@ -15,11 +15,15 @@ int main()
 {
     rxilog_set_console_level(RXILOG_FATAL);
 
-    rxilog_rolling_t roll1 = { FILE_NAME_DEBUG, 1500, 5 };
-    rxilog_add_rolling(RXILOG_DEBUG, &roll1);
+    // rxilog_rolling_t roll1 = { FILE_NAME_DEBUG, 1500, 5 };
+    // rxilog_add_rolling(RXILOG_DEBUG, &roll1);
 
-    rxilog_rolling_t roll2 = { FILE_NAME_FATAL, 1500, 3 };
-    rxilog_add_rolling(RXILOG_FATAL, &roll2);
+    // rxilog_rolling_t roll2 = { FILE_NAME_FATAL, 1500, 3 };
+    // rxilog_add_rolling(RXILOG_FATAL, &roll2);
+
+    // use compoud literals instead of '&object-of-struct', since C99
+    rxilog_add_rolling(RXILOG_DEBUG, &(rxilog_rolling_t) { FILE_NAME_DEBUG, 1500, 5 });
+    rxilog_add_rolling(RXILOG_FATAL, &(rxilog_rolling_t) { FILE_NAME_FATAL, 1500, 3 });
 
     while (1)
     {
