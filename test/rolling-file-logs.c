@@ -18,11 +18,18 @@ int main()
     // rxilog_rolling_t roll1 = { FILE_NAME_DEBUG, 1500, 5 };
     // rxilog_add_rolling(RXILOG_DEBUG, &roll1);
 
-    // rxilog_rolling_t roll2 = { FILE_NAME_FATAL, 1500, 3 };
+    // rxilog_rolling_t roll2;
+    // // roll2 = { FILE_NAME_FATAL, 1500, 3 }; // compile error
+    // roll2 = (rxilog_rolling_t) { FILE_NAME_FATAL, 1500, 3 }; // this is compoud literals
     // rxilog_add_rolling(RXILOG_FATAL, &roll2);
 
     // use compoud literals instead of '&object-of-struct', since C99
-    rxilog_add_rolling(RXILOG_DEBUG, &(rxilog_rolling_t) { FILE_NAME_DEBUG, 1500, 5 });
+    rxilog_add_rolling(RXILOG_DEBUG,
+                       &(rxilog_rolling_t) {
+                           FILE_NAME_DEBUG,
+                           1500,
+                           5,
+                       }); // trailing comma with initilizer list
     rxilog_add_rolling(RXILOG_FATAL, &(rxilog_rolling_t) { FILE_NAME_FATAL, 1500, 3 });
 
     while (1)
