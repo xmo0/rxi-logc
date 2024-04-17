@@ -1,3 +1,5 @@
+# last updated 24.04.17
+
 ---
 Language:        Cpp
 AccessModifierOffset: -4
@@ -27,13 +29,13 @@ BraceWrapping:
   AfterCaseLabel:  false
   AfterClass:      true
   AfterControlStatement: true
-  AfterEnum:       true
+  AfterEnum:       false # true
   AfterFunction:   true
   AfterNamespace:  false
   AfterObjCDeclaration: true
-  AfterStruct:     true
-  AfterUnion:      true
-  AfterExternBlock: true
+  AfterStruct:     false # true
+  AfterUnion:      false # true
+  AfterExternBlock: false # true
   BeforeCatch:     true
   BeforeElse:      true
   IndentBraces:    false

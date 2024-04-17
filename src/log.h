@@ -9,8 +9,7 @@
 #define LOG_H
 
 #ifdef __cplusplus
-extern "C"
-{
+extern "C" {
 #endif
 
 #include <stdarg.h>
@@ -35,19 +34,16 @@ typedef struct Callback
     char        *filename;
     off_t        max_log_size;
     unsigned int max_logs;
-    // rxilog_file_t *fp;
 } Callback;
 #endif
 
-typedef struct
-{
+typedef struct {
     char        *filename;
     off_t        max_log_size;
     unsigned int max_logs;
 } rxilog_rolling_t;
 
-typedef struct
-{
+typedef struct {
     FILE            *filp; // use with console logs
     struct Callback *cb;   // use with file logs
     struct tm       *time;
@@ -58,8 +54,7 @@ typedef struct
     va_list          ap;
 } rxilog_Event;
 
-enum
-{
+enum {
     RXILOG_FATAL, // this log level cannot be muted by log_set_xxx_level()
     RXILOG_ERROR,
     RXILOG_WARN,

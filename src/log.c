@@ -27,8 +27,7 @@
 #define MAX_CALLBACKS 32
 // #define MULTI_THREAD_SAFETY_TEST
 
-typedef struct Callback
-{
+typedef struct Callback {
     rxilog_LogFn fn;
     int          level;
     FILE        *filp;
@@ -37,8 +36,7 @@ typedef struct Callback
     unsigned int max_logs;
 } Callback;
 
-static struct
-{
+static struct {
     rxilog_LockFn lockFn;
     void         *lockData;
     bool          quiet;
@@ -247,6 +245,7 @@ int rxilog_add_rolling(int level, rxilog_rolling_t *roll)
                                     .filename     = roll->filename,
                                     .max_log_size = roll->max_log_size,
                                     .max_logs     = roll->max_logs };
+
     return 0;
 }
 
