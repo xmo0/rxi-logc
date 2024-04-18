@@ -27,8 +27,8 @@
 #define MAX_CALLBACKS 32
 // #define MULTI_THREAD_SAFETY_TEST
 
-typedef struct Callback {
-    rxilog_LogFn fn;
+typedef struct {
+    rlog_LogFn   fn;
     int          level;
     FILE        *filp;
     char        *filename;
@@ -36,14 +36,25 @@ typedef struct Callback {
     unsigned int max_logs;
 } Callback;
 
+struct s_rlog_Event {
+    FILE       *filp; // use with console logs
+    Callback   *cb;   // use with file logs
+    struct tm  *time;
+    int         level;
+    const char *src_file;
+    int         src_line;
+    const char *fmt;
+    va_list     ap;
+};
+
 static struct {
-    rxilog_LockFn lockFn;
-    void         *lockData;
-    bool          quiet;
-    bool          printfile; // print __FILE__
-    bool          printline; // print __LINE__
-    int           console_level;
-    Callback      callbacks[MAX_CALLBACKS];
+    rlog_LockFn lockFn;
+    void       *lockData;
+    bool        quiet;
+    bool        printfile; // print __FILE__
+    bool        printline; // print __LINE__
+    int         console_level;
+    Callback    callbacks[MAX_CALLBACKS];
 } L;
 
 static const char *level_strings[] = { "FATAL", "ERROR", "WARN", "INFO", "DEBUG", "TRACE" };
@@ -86,7 +97,7 @@ static int check_filp_valid(Callback *cb)
     return 0;
 }
 
-static void console_callback(rxilog_Event *ev)
+static void console_callback(rlog_Event *ev)
 {
     char buf[16];
     buf[strftime(buf, sizeof(buf), "%H:%M:%S", ev->time)] = '\0';
@@ -95,22 +106,22 @@ static void console_callback(rxilog_Event *ev)
 
     if (L.printfile)
     {
-        fprintf(ev->filp, "\x1b[90m%s\x1b[0m ", ev->src_file);
+        fprintf(ev->filp, "\x1b[90m%s:\x1b[0m ", ev->src_file);
     }
     if (L.printline)
     {
-        fprintf(ev->filp, "\x1b[90m%4d\x1b[0m ", ev->src_line);
+        fprintf(ev->filp, "\x1b[90m%.4d:\x1b[0m ", ev->src_line);
     }
 #else
     fprintf(ev->filp, "%s %-5s ", buf, level_strings[ev->level]);
 
     if (L.printfile)
     {
-        fprintf(ev->filp, "%s ", ev->src_file);
+        fprintf(ev->filp, "%s: ", ev->src_file);
     }
     if (L.printline)
     {
-        fprintf(ev->filp, "%4d ", ev->src_line);
+        fprintf(ev->filp, "%.4d: ", ev->src_line);
     }
 #endif
 #ifdef MULTI_THREAD_SAFETY_TEST
@@ -124,7 +135,7 @@ static void console_callback(rxilog_Event *ev)
     fflush(ev->filp);
 }
 
-static void file_callback(rxilog_Event *ev)
+static void file_callback(rlog_Event *ev)
 {
     check_filp_valid(ev->cb);
     FILE *filp = ev->cb->filp;
@@ -133,18 +144,18 @@ static void file_callback(rxilog_Event *ev)
     fprintf(filp, "%s %-5s ", buf, level_strings[ev->level]);
     if (L.printfile)
     {
-        fprintf(filp, "%s ", ev->src_file);
+        fprintf(filp, "%s: ", ev->src_file);
     }
     if (L.printline)
     {
-        fprintf(filp, "%4d ", ev->src_line);
+        fprintf(filp, "%.4d: ", ev->src_line);
     }
     vfprintf(filp, ev->fmt, ev->ap);
     fprintf(filp, "\n");
     fflush(filp);
 }
 
-static void rolling_appender_callback(rxilog_Event *ev)
+static void rolling_appender_callback(rlog_Event *ev)
 {
     Callback *cb  = ev->cb;
     char     *msg = (char *)calloc(strlen(cb->filename) + 1024, sizeof(char));
@@ -199,7 +210,7 @@ static void unlock(void)
     }
 }
 
-static void set_ev_time(rxilog_Event *ev)
+static void set_ev_time(rlog_Event *ev)
 {
     if (!ev->time)
     {
@@ -288,7 +299,7 @@ void rlog_log(int level, const char *file, int line, const char *fmt, ...)
         return;
     }
 
-    rxilog_Event ev = {
+    rlog_Event ev = {
         .level    = level,
         .src_file = file,
         .src_line = line,
