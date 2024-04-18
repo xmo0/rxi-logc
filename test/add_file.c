@@ -14,15 +14,15 @@
 int main()
 {
     const char string[] = "--- Program start ---\n";
-    rxilog_set_console_level(RXILOG_TRACE);
+    rlog_set_console_level(RLOG_TRACE);
 
-    rxilog_add_file(RXILOG_DEBUG, FILE_NAME_DEBUG);
-    rxilog_add_file(RXILOG_WARN, FILE_NAME_WARN);
+    rlog_add_file(RLOG_DEBUG, FILE_NAME_DEBUG);
+    rlog_add_file(RLOG_WARN, FILE_NAME_WARN);
 
-    rxilog_trace("number %d", 1);
-    rxilog_debug("number %d", 1);
-    rxilog_info("number %d", 1);
-    rxilog_warn("number %d", 1);
-    rxilog_error("number %d", 1);
-    rxilog_fatal("number %d", 1);
+    rlog_trace("number %d", 1);
+    rlog_debug("number %d", 1);
+    rlog_info("number %d", 1);
+    rlog_warn("number %d", 1);
+    rlog_error("number %d", 1);
+    rlog_fatal("number %d", 1);
 }

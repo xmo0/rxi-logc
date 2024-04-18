@@ -14,7 +14,7 @@
 int main()
 {
     const char string[] = "--- Program start ---\n";
-    rxilog_set_console_level(RXILOG_TRACE);
+    rlog_set_console_level(RLOG_TRACE);
 
     FILE *filp_debug = fopen(FILE_NAME_DEBUG, "a");
     if (!filp_debug)
@@ -23,7 +23,7 @@ int main()
         return -1;
     }
     fwrite(string, sizeof(char), strlen(string), filp_debug);
-    rxilog_add_filp(RXILOG_DEBUG, filp_debug);
+    rlog_add_filp(RLOG_DEBUG, filp_debug);
 
     FILE *filp_warn = fopen(FILE_NAME_WARN, "a");
     if (!filp_warn)
@@ -32,12 +32,12 @@ int main()
         return -1;
     }
     fwrite(string, sizeof(char), strlen(string), filp_warn);
-    rxilog_add_filp(RXILOG_WARN, filp_warn);
+    rlog_add_filp(RLOG_WARN, filp_warn);
 
-    rxilog_trace("number %d", 1);
-    rxilog_debug("number %d", 1);
-    rxilog_info("number %d", 1);
-    rxilog_warn("number %d", 1);
-    rxilog_error("number %d", 1);
-    rxilog_fatal("number %d", 1);
+    rlog_trace("number %d", 1);
+    rlog_debug("number %d", 1);
+    rlog_info("number %d", 1);
+    rlog_warn("number %d", 1);
+    rlog_error("number %d", 1);
+    rlog_fatal("number %d", 1);
 }

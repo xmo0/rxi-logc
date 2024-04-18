@@ -19,8 +19,8 @@ void  log_lock(bool lock, void *udata);
 int main()
 {
     pthread_mutex_init(&aMutex, NULL);
-    rxilog_set_console_level(RXILOG_INFO);
-    rxilog_set_lock(log_lock, &aMutex); // comment this will cause multi-thread safety issues
+    rlog_set_console_level(RLOG_INFO);
+    rlog_set_lock(log_lock, &aMutex); // comment this will cause multi-thread safety issues
 
     pthread_t tid_a, tid_b;
     if (pthread_create(&tid_a, NULL, thread_a, NULL))
@@ -58,9 +58,9 @@ void *thread_a(void *arg)
     // 因为上面的打印未使用mutex保护，延时以避免跟log_xxx系列的函数输出内容混在一起了
     usleep(1000 * 10);
 
-    for (int i = 0; i < 20; i++)
+    for (int i = 0; i < 10; i++)
     {
-        rxilog_info("aaaaaaaaaa %d", i);
+        rlog_info("aaaaaaaaaa %d", i);
         usleep(1);
     }
 }
@@ -71,9 +71,9 @@ void *thread_b(void *arg)
     // 因为上面的打印未使用mutex保护，延时以避免跟log_xxx系列的函数输出内容混在一起了
     usleep(1000 * 10);
 
-    for (int i = 0; i < 20; i++)
+    for (int i = 0; i < 10; i++)
     {
-        rxilog_fatal("bbbbbbbbbb %d", i);
+        rlog_fatal("bbbbbbbbbb %d", i);
         usleep(1);
     }
 }
