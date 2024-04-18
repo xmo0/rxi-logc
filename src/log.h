@@ -76,6 +76,8 @@ typedef void (*rxilog_LockFn)(bool lock, void *udata);
 const char *rxilog_level_string(int level);
 void        rxilog_set_lock(rxilog_LockFn lockFn, void *lockData);
 void        rxilog_set_quiet(bool enable);
+void        rxilog_set_printfile(bool enable);
+void        rxilog_set_printline(bool enable);
 void        rxilog_set_console_level(int level);
 int         rxilog_add_filp(int level, FILE *filp);
 int         rxilog_add_file(int level, char *filename);

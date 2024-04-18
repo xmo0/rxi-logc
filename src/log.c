@@ -40,6 +40,8 @@ static struct {
     rxilog_LockFn lockFn;
     void         *lockData;
     bool          quiet;
+    bool          printfile; // print __FILE__
+    bool          printline; // print __LINE__
     int           console_level;
     Callback      callbacks[MAX_CALLBACKS];
 } L;
@@ -89,15 +91,27 @@ static void console_callback(rxilog_Event *ev)
     char buf[16];
     buf[strftime(buf, sizeof(buf), "%H:%M:%S", ev->time)] = '\0';
 #ifdef LOG_USE_COLOR
-    fprintf(ev->filp,
-            "%s %s%-5s\x1b[0m \x1b[90m%s:%d:\x1b[0m ",
-            buf,
-            level_colors[ev->level],
-            level_strings[ev->level],
-            ev->src_file,
-            ev->src_line);
+    fprintf(ev->filp, "%s %s%-5s\x1b[0m ", buf, level_colors[ev->level], level_strings[ev->level]);
+
+    if (L.printfile)
+    {
+        fprintf(ev->filp, "\x1b[90m%s\x1b[0m ", ev->src_file);
+    }
+    if (L.printline)
+    {
+        fprintf(ev->filp, "\x1b[90m%4d\x1b[0m ", ev->src_line);
+    }
 #else
-    fprintf(ev->filp, "%s %-5s %s:%d: ", buf, level_strings[ev->level], ev->src_file, ev->src_line);
+    fprintf(ev->filp, "%s %-5s ", buf, level_strings[ev->level]);
+
+    if (L.printfile)
+    {
+        fprintf(ev->filp, "%s ", ev->src_file);
+    }
+    if (L.printline)
+    {
+        fprintf(ev->filp, "%4d ", ev->src_line);
+    }
 #endif
 #ifdef MULTI_THREAD_SAFETY_TEST
     usleep(1);
@@ -116,7 +130,15 @@ static void file_callback(rxilog_Event *ev)
     FILE *filp = ev->cb->filp;
     char  buf[64];
     buf[strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", ev->time)] = '\0';
-    fprintf(filp, "%s %-5s %s:%d: ", buf, level_strings[ev->level], ev->src_file, ev->src_line);
+    fprintf(filp, "%s %-5s ", buf, level_strings[ev->level]);
+    if (L.printfile)
+    {
+        fprintf(filp, "%s ", ev->src_file);
+    }
+    if (L.printline)
+    {
+        fprintf(filp, "%4d ", ev->src_line);
+    }
     vfprintf(filp, ev->fmt, ev->ap);
     fprintf(filp, "\n");
     fflush(filp);
@@ -205,6 +227,16 @@ void rxilog_set_console_level(int level)
 void rxilog_set_quiet(bool enable)
 {
     L.quiet = enable;
+}
+
+void rxilog_set_printfile(bool enable)
+{
+    L.printfile = enable;
+}
+
+void rxilog_set_printline(bool enable)
+{
+    L.printline = enable;
 }
 
 int rxilog_add_filp(int level, FILE *filp)
