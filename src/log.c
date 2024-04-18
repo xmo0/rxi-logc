@@ -208,38 +208,38 @@ static void set_ev_time(rxilog_Event *ev)
     }
 }
 
-const char *rxilog_level_string(int level)
+const char *rlog_level_string(int level)
 {
     return level_strings[level];
 }
 
-void rxilog_set_lock(rxilog_LockFn lockFn, void *lockData)
+void rlog_set_lock(rlog_LockFn lockFn, void *lockData)
 {
     L.lockFn   = lockFn;
     L.lockData = lockData;
 }
 
-void rxilog_set_console_level(int level)
+void rlog_set_console_level(int level)
 {
     L.console_level = level;
 }
 
-void rxilog_set_quiet(bool enable)
+void rlog_set_quiet(bool enable)
 {
     L.quiet = enable;
 }
 
-void rxilog_set_printfile(bool enable)
+void rlog_set_printfile(bool enable)
 {
     L.printfile = enable;
 }
 
-void rxilog_set_printline(bool enable)
+void rlog_set_printline(bool enable)
 {
     L.printline = enable;
 }
 
-int rxilog_add_filp(int level, FILE *filp)
+int rlog_add_filp(int level, FILE *filp)
 {
     int nac = get_next_available_callback();
     if (nac < 0)
@@ -251,7 +251,7 @@ int rxilog_add_filp(int level, FILE *filp)
     return 0;
 }
 
-int rxilog_add_file(int level, char *filename)
+int rlog_add_file(int level, char *filename)
 {
     int nac = get_next_available_callback();
     if (nac < 0)
@@ -263,7 +263,7 @@ int rxilog_add_file(int level, char *filename)
     return 0;
 }
 
-int rxilog_add_rolling(int level, rxilog_rolling_t *roll)
+int rlog_add_rolling(int level, rlog_rolling_t *roll)
 {
     int nac = get_next_available_callback();
     if (nac < 0)
@@ -281,7 +281,7 @@ int rxilog_add_rolling(int level, rxilog_rolling_t *roll)
     return 0;
 }
 
-void rxilog_log(int level, const char *file, int line, const char *fmt, ...)
+void rlog_log(int level, const char *file, int line, const char *fmt, ...)
 {
     if (L.quiet)
     {
